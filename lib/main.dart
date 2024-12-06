@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:scanner/view/scanner_page.dart';
+
 void main() {
   runApp(const MyApp());
 }
@@ -24,9 +26,11 @@ class ScannerPage extends StatelessWidget {
   const ScannerPage({super.key});
 
   void _openScanner(BuildContext context) {
-    // Логика открытия сканера
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Открыт сканнер')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraScannerPage(),
+      ),
     );
   }
 
