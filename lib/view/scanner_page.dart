@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:another_flushbar/flushbar.dart';
 import 'dart:async';
+import 'dart:io';
+import 'package:excel/excel.dart';
+
+import 'package:scanner/services/excel_helper.dart'; // Подключение ExcelHelper
 
 class CameraScannerPage extends StatefulWidget {
   @override
@@ -11,6 +15,19 @@ class CameraScannerPage extends StatefulWidget {
 class _CameraScannerPageState extends State<CameraScannerPage> {
   final MobileScannerController controller = MobileScannerController();
   bool isScanningPaused = false; // Флаг для паузы после сканирования
+  late ExcelHelper excelHelper;
+
+  @override
+  void initState() {
+    super.initState();
+    // Инициализация ExcelHelper с указанием пути к файлу
+    excelHelper = ExcelHelper(filePath: 'scanned_data.xlsx');
+    _initializeExcelFile();
+  }
+
+  Future<void> _initializeExcelFile() async {
+    await excelHelper.createExcelFile(); // Убедиться, что файл существует
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +52,8 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
                 if (barcode.rawValue != null) {
-                  // Если код успешно считан
-                  _showScanSuccessNotification(context, barcode.rawValue!);
+                  await _handleScannedData(barcode.rawValue!);
                 } else {
-                  // Если код не удалось считать
                   _showScanErrorNotification(context);
                 }
               }
@@ -78,10 +93,20 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
     );
   }
 
+  // Обработка отсканированных данных
+  Future<void> _handleScannedData(String scannedData) async {
+    if (await excelHelper.isDataUnique(scannedData)) {
+      await excelHelper.addData(scannedData);
+      _showScanSuccessNotification(context, "Код добавлен: $scannedData");
+    } else {
+      _showScanSuccessNotification(context, "Код уже существует: $scannedData");
+    }
+  }
+
   // Уведомление об успешном сканировании
-  void _showScanSuccessNotification(BuildContext context, String scannedData) {
+  void _showScanSuccessNotification(BuildContext context, String message) {
     Flushbar(
-      message: 'Код отсканирован: $scannedData',
+      message: message,
       duration: const Duration(seconds: 3),
       backgroundColor: Colors.green,
       margin: const EdgeInsets.all(8),
