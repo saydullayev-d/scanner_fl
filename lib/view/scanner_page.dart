@@ -20,13 +20,15 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
   @override
   void initState() {
     super.initState();
-    // Инициализация ExcelHelper с указанием пути к файлу
-    excelHelper = ExcelHelper(filePath: 'scanned_data.xlsx');
-    _initializeExcelFile();
+
+    excelHelper = ExcelHelper();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeExcelFile();
+    });
   }
 
   Future<void> _initializeExcelFile() async {
-    await excelHelper.createExcelFile(); // Убедиться, что файл существует
+    await excelHelper.createExcelFile();
   }
 
   @override
@@ -52,7 +54,9 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
                 if (barcode.rawValue != null) {
-                  await _handleScannedData(barcode.rawValue!);
+                  String rawText = barcode.rawValue!;
+                  String cleanedData = removeUnreadableCharacters(rawText);
+                  await _handleScannedData(cleanedData);
                 } else {
                   _showScanErrorNotification(context);
                 }
@@ -94,30 +98,37 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
   }
 
   // Обработка отсканированных данных
+// Обработка отсканированных данных
   Future<void> _handleScannedData(String scannedData) async {
     if (await excelHelper.isDataUnique(scannedData)) {
       await excelHelper.addData(scannedData);
-      _showScanSuccessNotification(context, "Код добавлен: $scannedData");
+      _showNotification(context, "Код добавлен", Colors.green);
     } else {
-      _showScanSuccessNotification(context, "Код уже существует: $scannedData");
+      _showNotification(context, "Код уже существует", Colors.orange);
     }
   }
 
-  // Уведомление об успешном сканировании
-  void _showScanSuccessNotification(BuildContext context, String message) {
+  String removeUnreadableCharacters(String input) {
+    RegExp regExp = RegExp(r'[^\x20-\x7E]');
+    return input.replaceAll(regExp, '');
+  }
+
+
+  void _showNotification(BuildContext context, String message, Color color) {
     Flushbar(
       message: message,
       duration: const Duration(seconds: 3),
-      backgroundColor: Colors.green,
+      backgroundColor: color,
       margin: const EdgeInsets.all(8),
       borderRadius: BorderRadius.circular(8),
       flushbarPosition: FlushbarPosition.BOTTOM,
-      icon: const Icon(
-        Icons.check_circle,
+      icon: Icon(
+        color == Colors.green ? Icons.check_circle : Icons.warning_amber_rounded,
         color: Colors.white,
       ),
     ).show(context);
   }
+
 
   // Уведомление о проблеме при сканировании
   void _showScanErrorNotification(BuildContext context) {
