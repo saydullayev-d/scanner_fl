@@ -74,26 +74,6 @@ class _CameraScannerPageState extends State<CameraScannerPage> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 4.0,
-        color: Colors.white,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              onPressed: () {
-                print("pressed");
-              },
-              icon: const Icon(
-                Icons.check_circle_outline_rounded,
-                size: 50,
-                color: Color(0xFF334050),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

@@ -27,56 +27,63 @@ class ExcelHelper {
     if (!await file.exists()) {
       try {
         var excel = Excel.createExcel();
-        // Работать с первым листом
         var firstSheet = excel.tables.keys.first;
         var sheet = excel[firstSheet];
-        sheet.appendRow(['Счёт фактура от $currentDate']); // Добавляем заголовок
-        // Сохраняем файл
-        List<int> bytes = excel.encode()!;
-        await file.writeAsBytes(bytes, flush: true);
+        sheet.appendRow(['Счёт фактура от $currentDate']); // Заголовок добавляется только один раз
+        file.writeAsBytesSync(excel.save()!, flush: true);
       } catch (e) {
-        print('Error creating Excel file: $e');
+        print('Ошибка при создании файла Excel: $e');
       }
     }
   }
 
   /// Проверяет, есть ли данные в Excel
   Future<bool> isDataUnique(String data) async {
-    await createExcelFile(); // Убедимся, что файл существует
+    await createExcelFile();
     final file = File(filePath!);
     var bytes = file.readAsBytesSync();
     var excel = Excel.decodeBytes(bytes);
 
-    // Работаем с первым листом
     var firstSheetName = excel.tables.keys.first;
     Sheet? sheet = excel[firstSheetName];
     if (sheet == null) return true;
 
-    for (var row in sheet.rows.skip(1)) { // Пропускаем заголовок
-      if (row.isNotEmpty && row.first?.value == data) {
+    for (var row in sheet.rows) {
+      // Проверяем, что в строке есть хотя бы одна ячейка, и она равна искомому значению
+      if (row.isNotEmpty && row.first?.value?.toString() == data) {
+        print('Найдено дублирующееся значение: $data');
         return false;
       }
     }
     return true;
   }
 
+
+
   /// Добавляет новые данные в первый лист Excel
   Future<void> addData(String data) async {
-    await createExcelFile(); // Убедимся, что файл существует
+    await createExcelFile();
     final file = File(filePath!);
     var bytes = file.readAsBytesSync();
     var excel = Excel.decodeBytes(bytes);
 
-    // Работаем с первым листом
     var firstSheetName = excel.tables.keys.first;
     Sheet? sheet = excel[firstSheetName];
     if (sheet != null) {
-      sheet.appendRow([data]); // Добавляем новую строку
-      file.writeAsBytesSync(excel.save()!); // Сохраняем изменения
+      // Проверяем уникальность перед добавлением
+      if (await isDataUnique(data)) {
+        sheet.appendRow([data]);
+        // Сохраняем изменения в файл
+        file.writeAsBytesSync(excel.save()!, flush: true);
+        print('Данные добавлены: $data');
+      } else {
+        print('Данные уже существуют: $data');
+      }
     } else {
       print('Ошибка: Первый лист не найден!');
     }
   }
+
 
   /// Получает список всех Excel файлов в каталоге
   Future<List<String>> getExcelFiles() async {

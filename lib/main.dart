@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:scanner/services/excel_helper.dart';
 import 'package:scanner/view/scanner_page.dart';
 import 'package:open_file/open_file.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() {
   runApp(const MyApp());
@@ -52,6 +53,28 @@ class _ScannerPageState extends State<ScannerPage> {
     }
   }
 
+  Future<void> _clearFiles() async {
+    try {
+      for (final filePath in files) {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete(); // Удаление файла
+        }
+      }
+      setState(() {
+        files.clear(); // Очистка списка файлов
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Все файлы успешно удалены')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка при удалении файлов: $e')),
+      );
+      print('Ошибка при удалении файлов: $e');
+    }
+  }
+
   void _openScanner(BuildContext context) {
     Navigator.push(
       context,
@@ -72,9 +95,32 @@ class _ScannerPageState extends State<ScannerPage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code, color: Colors.white),
-            tooltip: 'Открыть сканнер',
-            onPressed: () => _openScanner(context),
+            icon: const Icon(Icons.delete, color: Colors.white),
+            tooltip: 'Очистить файлы',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Подтверждение'),
+                    content: const Text('Вы уверены, что хотите удалить все файлы?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Отмена'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Удалить'),
+                      ),
+                    ],
+                  );
+                },
+              );
+              if (confirm == true) {
+                await _clearFiles();
+              }
+            },
           ),
         ],
       ),
@@ -87,6 +133,20 @@ class _ScannerPageState extends State<ScannerPage> {
           return ListTile(
             leading: const Icon(Icons.insert_drive_file),
             title: Text(fileName),
+            trailing: IconButton(
+              icon: const Icon(Icons.share),
+              tooltip: 'Поделиться',
+              onPressed: () {
+                try {
+                  Share.shareXFiles([XFile(files[index])]); // Поделиться файлом
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Ошибка при отправке: $e')),
+                  );
+                  print('Ошибка: $e');
+                }
+              },
+            ),
             onTap: () async {
               try {
                 // Открытие файла с помощью open_file
@@ -106,6 +166,11 @@ class _ScannerPageState extends State<ScannerPage> {
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _openScanner(context),
+        tooltip: 'Открыть сканнер',
+        child: const Icon(Icons.qr_code_scanner),
       ),
     );
   }
